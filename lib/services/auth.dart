@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_facebook_login/flutter_facebook_login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 // A generic class to decouple all the authentication code provided by
@@ -17,6 +18,8 @@ abstract class AuthBase {
   Stream<User> get onAuthStateChange;
   Future<User> currentUser();
   Future<User> signInAnonymously();
+  Future<User> signInWithGoogle();
+  Future<User> signInWithFacebook();
   Future<void> signOut();
 }
 
@@ -54,19 +57,21 @@ class Auth implements AuthBase {
     return _userFromFirebase(authResult.user);
   }
 
+  @override
   Future<User> signInWithGoogle() async {
     // creating an object of type google sign in
-    GoogleSignIn googleSignIn = GoogleSignIn();
+    final googleSignIn = GoogleSignIn();
 
     // object for letting the user sign in
-    GoogleSignInAccount googleSignInAccount = await googleSignIn.signIn();
+    final googleSignInAccount = await googleSignIn.signIn();
 
     // check to see if we've received the access token or not
     if (googleSignInAccount != null) {
       // authorize the user
-      GoogleSignInAuthentication googleSignInAuthentication =
+      final googleSignInAuthentication =
           await googleSignInAccount.authentication;
-      if (googleSignInAuthentication.idToken != null && googleSignInAuthentication.accessToken != null) {
+      if (googleSignInAuthentication.idToken != null &&
+          googleSignInAuthentication.accessToken != null) {
         final authResult = await _firebaseAuth.signInWithCredential(
           GoogleAuthProvider.getCredential(
             idToken: googleSignInAuthentication.idToken,
@@ -76,21 +81,45 @@ class Auth implements AuthBase {
         return _userFromFirebase(authResult.user);
       } else {
         throw PlatformException(
-          code: 'ERROR_MISSING_GOOGLE_AUTH_TOKEN',
-          message: 'Missing Google Auth Token'
-        );
+            code: 'ERROR_MISSING_GOOGLE_AUTH_TOKEN',
+            message: 'Missing Google Auth Token');
       }
     } else {
       throw PlatformException(
-        code: 'ERROR_ABORTED_BY_USER',
-        message: 'Sign In aborted by user'
+          code: 'ERROR_ABORTED_BY_USER', message: 'Sign In aborted by user');
+    }
+  }
+
+  @override
+  Future<User> signInWithFacebook() async {
+    final facebookLogin = FacebookLogin();
+    final result = await facebookLogin.logIn(['public_profile']);
+    print(result.errorMessage);
+    if (result.accessToken != null) {
+      final authResult = await _firebaseAuth.signInWithCredential(
+        FacebookAuthProvider.getCredential(
+          accessToken: result.accessToken.token,
+        ),
       );
+      return _userFromFirebase(authResult.user);
+    } else {
+      throw PlatformException(
+          code: 'ERROR_ABORTED_BY_USER', message: 'Sign In aborted by user');
     }
   }
 
   // asynchronous function that let's user sign out
   @override
   Future<void> signOut() async {
+    // signOut with google
+    final googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+
+    // logOut from facebook
+    final facebookLogin = FacebookLogin();
+    await facebookLogin.logOut();
+
+    // signOut from firebase
     await _firebaseAuth.signOut();
   }
 }
