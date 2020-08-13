@@ -94,7 +94,6 @@ class Auth implements AuthBase {
   Future<User> signInWithFacebook() async {
     final facebookLogin = FacebookLogin();
     final result = await facebookLogin.logIn(['public_profile']);
-    print(result.errorMessage);
     if (result.accessToken != null) {
       final authResult = await _firebaseAuth.signInWithCredential(
         FacebookAuthProvider.getCredential(
