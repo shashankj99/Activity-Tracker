@@ -1,5 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:time_tracker/app/sign_in/form_submit_button.dart';
+import 'package:time_tracker/custom_widget/platform_alert_dialogue.dart';
 import 'package:time_tracker/services/auth.dart';
 import 'package:time_tracker/services/validators.dart';
 
@@ -48,7 +50,11 @@ class _EmailSignInFormState extends State<EmailSignInForm> {
       }
       Navigator.of(context).pop();
     } catch (error) {
-      print(error.toString());
+      PlatformAlertDialogue(
+        title: "Sign In Failed",
+        content: error.toString(),
+        defaultActionText: "OK",
+      ).show(context);
     } finally {
       setState(() {
         _isLoading = false;
