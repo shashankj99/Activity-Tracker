@@ -2,9 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:time_tracker/app/sign_in/form_submit_button.dart';
-import 'package:time_tracker/custom_widget/platform_alert_dialogue.dart';
+import 'package:time_tracker/custom_widget/platform_exception_alert_dialog.dart';
 import 'package:time_tracker/services/auth.dart';
 import 'package:time_tracker/services/validators.dart';
+import 'package:flutter/services.dart';
 
 enum EmailSignInFormType { signIn, register }
 
@@ -36,6 +37,17 @@ class _EmailSignInFormState extends State<EmailSignInForm> {
     FocusScope.of(context).requestFocus(focus);
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+
+    super.dispose();
+  }
+
   void _submit() async {
     setState(() {
       _submitted = true;
@@ -49,11 +61,10 @@ class _EmailSignInFormState extends State<EmailSignInForm> {
         await auth.createAccountWithEmail(_email, _password);
       }
       Navigator.of(context).pop();
-    } catch (error) {
-      PlatformAlertDialogue(
+    } on PlatformException catch (error) {
+      PlatformExceptionAlertDialog(
         title: "Sign In Failed",
-        content: error.toString(),
-        defaultActionText: "OK",
+        exception: error,
       ).show(context);
     } finally {
       setState(() {

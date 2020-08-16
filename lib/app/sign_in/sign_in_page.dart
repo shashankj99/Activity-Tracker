@@ -1,18 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:time_tracker/app/sign_in/email_sign_in_page.dart';
 import 'package:time_tracker/app/sign_in/sign_in_button.dart';
 import 'package:time_tracker/app/sign_in/social_sign_in_button.dart';
+import 'package:time_tracker/custom_widget/platform_exception_alert_dialog.dart';
 import 'package:time_tracker/services/auth.dart';
 
-class SignInPage extends StatelessWidget {
+class SignInPage extends StatefulWidget {
+  @override
+  _SignInPageState createState() => _SignInPageState();
+}
+
+class _SignInPageState extends State<SignInPage> {
+  bool _isLoading = false;
+
+  void _showSignInError(BuildContext context, PlatformException exception) {
+    PlatformExceptionAlertDialog(
+      title: 'Sign In Failed',
+      exception: exception,
+    ).show (context);
+  }
 
   Future<void> _signInAnonymously(BuildContext context) async {
+    setState(() => _isLoading = true);
     try {
       final auth = Provider.of<AuthBase>(context, listen: false);
       await auth.signInAnonymously();
     } catch (error) {
-      print(error.toString());
+      _showSignInError(context, error);
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -21,7 +39,11 @@ class SignInPage extends StatelessWidget {
       final auth = Provider.of<AuthBase>(context, listen: false);
       await auth.signInWithGoogle();
     } catch (error) {
-      print(error.toString());
+      if (error.code != 'ERROR_ABORTED_BY_USER') {
+        _showSignInError(context, error);
+      }
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -30,7 +52,11 @@ class SignInPage extends StatelessWidget {
       final auth = Provider.of<AuthBase>(context, listen: false);
       await auth.signInWithFacebook();
     } catch (error) {
-      print(error.toString());
+      if (error.code != 'ERROR_ABORTED_BY_USER') {
+        _showSignInError(context, error);
+      }
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -58,27 +84,7 @@ class SignInPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(
-                "Activity",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 40.0,
-                    fontWeight: FontWeight.w500
-                ),
-              ),
-              Text(
-                "Tracker",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 40.0,
-                    fontWeight: FontWeight.w300
-                ),
-              ),
-            ],
-          ),
+          _buildHeader(),
           SizedBox(height: 8.0,),
           Text(
             "Assign your activities with time...",
@@ -94,7 +100,7 @@ class SignInPage extends StatelessWidget {
             text: 'Sign in with Google',
             textColor: Colors.black87,
             color: Colors.white,
-            onPressed: () => _signInWithGoogle(context),
+            onPressed: _isLoading ? null : () => _signInWithGoogle(context),
           ),
           SizedBox(height: 8.0,),
           SocialSignInButton(
@@ -102,14 +108,14 @@ class SignInPage extends StatelessWidget {
             text: 'Sign in with Facebook',
             textColor: Colors.white,
             color: Color(0xFF334D92),
-            onPressed: () => _signInWithFacebook(context),
+            onPressed: _isLoading ? null : () => _signInWithFacebook(context),
           ),
           SizedBox(height: 8.0,),
           SignInButton(
             text: 'Sign in with Email',
             textColor: Colors.white,
             color: Colors.teal[700],
-            onPressed: () => _signInWithEmail(context),
+            onPressed: _isLoading ? null : () => _signInWithEmail(context),
             icon: Icons.email,
           ),
           SizedBox(height: 8.0,),
@@ -126,11 +132,40 @@ class SignInPage extends StatelessWidget {
             text: 'Go Anonymous',
             textColor: Colors.black87,
             color: Colors.lime[300],
-            onPressed: () => _signInAnonymously(context),
+            onPressed: _isLoading ? null : () => _signInAnonymously(context),
             icon: Icons.person,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Text(
+          "Activity",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: 40.0,
+              fontWeight: FontWeight.w500
+          ),
+        ),
+        Text(
+          "Tracker",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: 40.0,
+              fontWeight: FontWeight.w300
+          ),
+        ),
+      ],
     );
   }
 }
